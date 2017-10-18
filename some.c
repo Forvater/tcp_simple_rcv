@@ -3,14 +3,36 @@
 
 #include <netdb.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <string.h>
 
-int main( int argc, char *argv[] ) {
+#include <time.h>
+
+#define BUFLEN 1024
+
+
+
+void format_time(char *output){
+    time_t rawtime;
+    struct tm * timeinfo;
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );
+
+    sprintf(output, "[%d %d %d %d:%d:%d]",timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year + 1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+}
+
+int main( int argc, char *argv[] )
+{
    int sockfd, newsockfd, portno, clilen;
    char buffer[256];
+   char time_char[256];
    struct sockaddr_in serv_addr, cli_addr;
    int  n;
+   int i;
+    FILE* fp;
+    fp = fopen ("tcp_received.log", "a+");
    
    /* First call to socket() function */
    sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -38,6 +60,9 @@ int main( int argc, char *argv[] ) {
       * go in sleep mode and will wait for the incoming connection
    */
    
+
+
+
     while(1)
     {
         listen(sockfd,5);
@@ -48,7 +73,7 @@ int main( int argc, char *argv[] ) {
 
         if (newsockfd < 0)
         {
-            perror("ERROR on accept");
+            perror("ERROR on acceptT");
             exit(1);
         }
    
@@ -62,7 +87,23 @@ int main( int argc, char *argv[] ) {
             exit(1);
         }
    
-        printf("Here is the message: %s\n",buffer);
+        
+        bzero(time_char,256);
+        format_time(time_char);
+
+        fprintf(fp,"%s : Received packet from %s:%d [Data ASCII: %s] ", time_char, inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port),buffer);
+
+        fprintf(fp,"Data hex: ");
+        for (i=0;i<n;i++)
+        {
+            fprintf(fp,"0x%02x ", buffer[i]);
+        }
+        fprintf(fp,"\n");
+//        memset(buffer, 0, BUFLEN);
+        fflush(fp);
+
+
+
    
         /* Write a response to the client */
 //        n = write(newsockfd,"I got your message",18);
